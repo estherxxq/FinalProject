@@ -5,17 +5,17 @@ library(ggplot2)
 # A. Initializing parameters
 
 # experimental variables
-size <- 4 # number of Tadros in the group
-goal.direct <- 0.3 # degree of goal-directedness, between 0 and 1
-n.iteration <- 100 # numbers of iteration to run
+size <- 7 # number of Tadros in the group
+goal.direct <- 1 # degree of goal-directedness, between 0 and 1
+n.iteration <- 50 # numbers of iteration to run
 Tadro <- c(1:size)
 
 # basic parameters for each Tadro
-v <- 1 # internal velocity of Tadro
+v <- 0.8 # internal velocity of Tadro
 Vmax <- 1.5 # maximum velocity of Tadro
 Cd <- 1 # coefficient of drag; the greater this is, the more effect inertia has
 a <- 0.8 # interaction range, repulsion grows exponentially when d is smaller than this
-       # this also as this increases the function grows steeper
+# this also as this increases the function grows steeper
 
 # environment parameters
 # position of the light source, set as (0,0)
@@ -37,19 +37,20 @@ Run <- function(){
   
   last.dx <- numeric(size)
   last.dy <- numeric(size)
-
+  
   # initialize initial position (for iteration = 0)
-    # One way is to randomize the positions
+  # One way is to randomize the positions
   # for(i in 1:size){
   #   x[i] <- runif(1, -5, 5)
   #   y[i] <- runif(1, -5, 5)
   # }
-    # Another way is to let them start at the pool side
-  start.point <- circleFun(c(0,0), pool.diameter, size)
+  # Another way is to let them start at the pool side
+  start.point <- circleFun(c(0,0), pool.diameter, size * 10)
   
   for(i in 1:size){
-    x[i] <- start.point$xx[i]
-    y[i] <- start.point$yy[i]
+    s <- i * 10 - 3
+    x[i] <- start.point$xx[s]
+    y[i] <- start.point$yy[s]
   }
   
   # x and y coordinate can be represent as a function of iteration and tadro number
@@ -62,7 +63,7 @@ Run <- function(){
     
     # for each individual Tadro
     for(i in Tadro){
-
+      
       # Read the final coordinates of Tadro i after the last iteration
       current.x <- x[size*(t-1) + i]
       current.y <- y[size*(t-1) + i]
@@ -76,7 +77,7 @@ Run <- function(){
       
       # if tadro is not goal directed, it moves randomly
       # alternatively, it moves d = v towards the light
-
+      
       # 2. Calculate inertial force
       # a function of last final displacement, the drag coefficient, and the mass of tadro
       dx.inert = last.dx[i] * Cd # displacement on x-axis
@@ -88,7 +89,7 @@ Run <- function(){
       
       # calculate the repulsive force from each tadro other than i
       for(j in Tadro[-i]){
-     
+        
         # read the coordinates of Tadro j
         other.x <- x[size * (t-1) + j]
         other.y <- y[size * (t-1) + j]
@@ -107,45 +108,15 @@ Run <- function(){
         
       } # repulsion loop ends
       
+      
       # sum to get total displacement due to repulsion
       dx.repulse <- sum(dx.R)
       dy.repulse <- sum(dy.R)
       
-      # 4. Calculate repulsive force from the pool edge
-      pool.edge <- circleFun(c(0,0), pool.diameter, 1000)
-      pool.x <- pool.edge$xx[j]
-      pool.y <- pool.edge$yy[j]
-      
-      dx.pool <- numeric(1000)
-      dy.pool <- numeric(1000)
-      
-      pool.collision <- FALSE
-      
-      for (j in 1:1000){
-        d <- distance(current.x, current.y, pool.x, pool.y)
-        if (d <= Vmax){
-          repulsion <- Vmax
-          pool.collision <- TRUE
-        } else {
-          repulsion <- 0
-        }
-     
-      dx.pool[j] <- (0 - pool.x) * (repulsion/(pool.diameter/2))
-      dy.pool[j] <- (0 - pool.y) * (repulsion/(pool.diameter/2))
-      } # pool repulsion loop ends
-
-      dx.pool <- sum(dx.pool)
-      dy.pool <- sum(dy.pool)
-
       # 4. Calculate final displacement
       # sum to get total displacement on x and y axes
-      if (pool.collision == FALSE){
-        dx <- dx.light + dx.inert + dx.repulse
-        dy <- dy.light + dy.inert + dy.repulse
-      } else {
-        dx <- dx.pool
-        dy <- dy.pool
-      }
+      dx <- dx.light + dx.inert + dx.repulse
+      dy <- dy.light + dy.inert + dy.repulse
       
       # calculate total displacement
       displacement <- sqrt(dx^2 + dy^2)
@@ -225,8 +196,104 @@ plot.result
 # below code plots all iterations
 plot.all.result <- ggplot(results, aes(x = x, y = y)) +
   geom_point(data = results[1:size,], aes(x = x, y = y, color = factor(Tadro))) +
-  geom_segment(aes(xend = Prev.x, yend = Prev.y, color = factor(Tadro)), 
-              arrow = arrow(length = unit(0.15,"cm"), ends = "last")) +
+  geom_segment(data = results, aes(xend = Prev.x, yend = Prev.y, color = factor(Tadro)), 
+               arrow = arrow(length = unit(0.15,"cm"), ends = "first")) +
   geom_path(data = results[n1:n2,], aes(xx, yy))
- 
+
 plot.all.result
+
+# E. Experimental Data Collection
+
+# Calculate the group stability, Sg
+
+calc.sg <- function(data){
+  
+  x <- data[,3]
+  y <- data[,4]
+  
+  Io <- numeric(n.iteration)
+  Ii <- numeric(n.iteration)
+  Sg <- numeric(n.iteration)
+  
+  for (t in 1:n.iteration) {
+    
+    # Step 1: calculate observed instability (Io)
+    # which is the sum of the differences in distances between each tadro
+    # 1. calculate current distance between each tadro
+    
+    current.tadro.distance <- matrix(nrow = size, ncol = size)
+    
+    for(i in Tadro){
+      A.x <- x[size*t + i]
+      A.y <- y[size*t + i]
+      for (j in Tadro) {
+        B.x <- x[size*t + j]
+        B.y <- y[size*t + j]
+        current.tadro.distance[i,j] <- distance(A.x, A.y, B.x, B.y)
+      }
+    } # current distance calc loop ends
+    
+    
+    # 2. calculate distance between each tadro at the last iteration
+    last.tadro.distance <- matrix(nrow = size, ncol = size)
+    
+    for(i in Tadro){
+      a.x <- x[size*(t-1) + i]
+      a.y <- y[size*(t-1) + i]
+      for (j in Tadro) {
+        b.x <- x[size*(t-1) + j]
+        b.y <- y[size*(t-1) + j]
+        last.tadro.distance[i,j] <- distance(a.x, a.y, b.x, b.y)
+      }
+    } # last distance calc loop ends
+    
+    # 3. calculate their difference
+    different.tadro.distance <- abs(current.tadro.distance - last.tadro.distance)
+    # 4. sum the differences
+    Io[t] <- sum(different.tadro.distance)/2 
+    # divide by 2 because everything was counted twice in the matrix
+    
+    
+    # Step 2: Calculate Ii
+    # which is the maximum instability possible for this iteration, based on their speed
+    # 1. compute the actual speed at which each robot traveled
+    # this is basically the distance traveled from last position
+    speed <- numeric(size)
+    
+    for (i in Tadro){
+      current.x <- x[size*t + i]
+      current.y <- y[size*t + i]
+      last.x <- x[size*(t-1) + i]
+      last.y <- y[size*(t-1) + i]
+      speed[i] <- distance(current.x, current.y, last.x, last.y)
+    }
+    
+    # 2. find the location that leads to the smallest Id
+    # (need to ask Josh about this)
+    #Ii[t] <- Io[t]
+    # right now I'm just getting the total speed and using it to adjust the Io
+    iteration.speed <- sum(speed)
+    Ii[t] <- iteration.speed
+    
+    # Step 3: Calculate Sg
+    # take the ratio between Io and Ii, and subtract it from 1
+    Sg[t] <- 1/(Io[t]/Ii[t])
+    
+    
+  } # iteration loop ends
+  
+  data.Sg <- data.frame(iteration = c(1:n.iteration), Io = Io, Ii = Ii, Sg = Sg)
+  return(data.Sg)
+} # Sg calculation function ends
+
+Sg <- calc.sg(results)
+
+# plot Sg by iteration
+plot.Sg <- ggplot(data = Sg, aes(x = iteration, y = Sg)) +
+  geom_point() +
+  stat_smooth(method = 'lm', formula = y ~ x, )
+
+plot.Sg
+# plot(Sg$iteration, Sg$Sg)
+# test correlation
+cor.test(Sg$iteration, Sg$Sg)

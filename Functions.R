@@ -61,6 +61,10 @@ prev.generate <- function(x){
   for(i in (size + 1):length(x)){
     prev.x[i] <- x[i-size]
   }
+  
+  for(i in 1:size){
+    prev.x[i] <- x[i]
+  }
   return(prev.x)
 }
 
