@@ -5,8 +5,8 @@ library(ggplot2)
 # A. Initializing parameters
 
 # experimental variables
-size <- 8 # number of Tadros in the group
-goal.direct <- 0.5 # degree of goal-directedness, between 0 and 1
+size <- 6 # number of Tadros in the group
+goal.direct <- 1 # degree of goal-directedness, between 0 and 1
 n.iteration <- 100 # numbers of iteration to run
 Tadro <- c(1:size)
 
@@ -17,9 +17,13 @@ Cd <- 1 # coefficient of drag; the greater this is, the more effect inertia has
 a <- 1 # interaction range, repulsion grows exponentially when d is smaller than this
        # this also as this increases the function grows steeper
 
+# environment parameters
 # position of the light source, set as (0,0)
 light.x <- 0
 light.y <- 0
+# diameter of the pool
+pool.diameter <- 10
+
 
 # B. Main function
 
@@ -35,9 +39,17 @@ Run <- function(){
   last.dy <- numeric(size)
 
   # initialize initial position (for iteration = 0)
+    # One way is to randomize the positions
+  # for(i in 1:size){
+  #   x[i] <- runif(1, -5, 5)
+  #   y[i] <- runif(1, -5, 5)
+  # }
+    # Another way is to let them start at the pool side
+  start.point <- circleFun(c(0,0), pool.diameter, size)
+  
   for(i in 1:size){
-    x[i] <- runif(1, -5, 5)
-    y[i] <- runif(1, -5, 5)
+    x[i] <- start.point$xx[i]
+    y[i] <- start.point$yy[i]
   }
   
   # x and y coordinate can be represent as a function of iteration and tadro number
@@ -148,6 +160,7 @@ results <- Run()
 
 
 
+
 # D. Graphic Representation of Data
 
 # a coordinate graph with gridlines, a circle in the center as light, and path of each
@@ -164,15 +177,27 @@ n1 <- n2 - 10*size + 1
 n4 <- n1 - 1
 n3 <- n4 - size + 1
 
-plot.result <- ggplot(results[n1:n2,], aes(x = x, y = y, colour = factor(Tadro))) +
+# laying out a pool on top of the graph
+pool <- circleFun(c(0,0), pool.diameter, size * 10)
+results$xx <- c(1:((n.iteration - 9)*size), pool$xx)
+results$yy <- c(1:((n.iteration - 9)*size), pool$yy)
+
+# plotting: point of the first iteration being plotted, and then segments with arrows 
+plot.result <- ggplot(results[n1:n2,], aes(x = x, y = y)) +
   geom_point(data = results[n3:n4,], aes(x = x, y = y, color = factor(Tadro))) +
   geom_segment(aes(xend = Prev.x, yend = Prev.y, color = factor(Tadro)), 
-               arrow = arrow(length = unit(0.15,"cm"), ends = "first"))
+               arrow = arrow(length = unit(0.15,"cm"), ends = "first")) +
+  geom_path(aes(xx, yy))
 
+# view plot
 plot.result
 
-
-
+# below code plots all iterations
+plot.result <- ggplot(results, aes(x = x, y = y)) +
+  geom_point(data = results[1:size,], aes(x = x, y = y, color = factor(Tadro))) +
+  geom_segment(aes(xend = Prev.x, yend = Prev.y, color = factor(Tadro)), 
+               arrow = arrow(length = unit(0.15,"cm"), ends = "first")) +
+  geom_path(data = results[n1:n2,], aes(xx, yy))
 
 
 # E. Experimental Data Collection

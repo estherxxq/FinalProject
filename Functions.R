@@ -71,23 +71,16 @@ direction.mark.generate <- function(x){
   return(direction.mark)
 }
 
-# 
-# a <- (n.iteration+1)*size-10*size
-# b <- (n.iteration+1)*size
-# 
-# results <- ggplot(data[1001:1064,], aes(x = x, y = y, colour = factor(Tadro))) +
-#   geom_point(data[1001:1008,], aes(x = x, y = y, colour = factor(Tadro))) +
-#   geom_segment(aes(xend = PrevX, yend = PrevY, colour=factor(Tadro)), arrow = arrow(length = unit(0.15,"cm"), ends = "first"))
-# 
-# results
-# 
-# results <- ggplot(data[1009:1200,], aes(x = x, y = y, colour = factor(Tadro))) +
-#   geom_point(data = data[1001:1008,], aes(x = x, y = y, colour = factor(Tadro))) +
-#   # geom_path() +
-#   #geom_segment(aes(xend = directionX, yend = directionY, colour=factor(Tadro)),arrow = arrow(length = unit(0.2,"cm")))
-#   geom_segment(aes(xend = PrevX, yend = PrevY, colour=factor(Tadro)), arrow = arrow(length = unit(0.15,"cm"), ends = "first"))
-# # xlim(-2, 2) +
-# # ylim(-2, 2)
-# #facet_wrap(~Time)
-# 
-# results
+# This is a function to make a series of circles that I found on the internet
+# source: http://stackoverflow.com/questions/6862742/draw-a-circle-with-ggplot2
+circleFun <- function(center = c(0,0),diameter, npoints){
+  r = diameter / 2
+  tt <- seq(0,2*pi,length.out = npoints)
+  xx <- center[1] + r * cos(tt)
+  yy <- center[2] + r * sin(tt)
+  return(data.frame(xx = xx, yy = yy))
+}
+
+# dat <- circleFun(c(0,0), pool.diameter, size)
+# #geom_path will do open circles, geom_polygon will do filled circles
+# ggplot(dat,aes(x,y)) + geom_path()
