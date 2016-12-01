@@ -1,6 +1,4 @@
 library(ggplot2)
-library(gganimate)
-library(animation)
 
 # Run all the functions in the file Functions.R before running this model
 
@@ -8,16 +6,16 @@ library(animation)
 
 # experimental variables
 size <- 8 # number of Tadros in the group
-goal.direct <- 1 # degree of goal-directedness, between 0 and 1
-n.iteration <- 50 # numbers of iteration to run
+goal.direct <- 0.5 # degree of goal-directedness, between 0 and 1
+n.iteration <- 100 # numbers of iteration to run
 Tadro <- c(1:size)
 
 # basic parameters for each Tadro
-v <- 0.5 # internal velocity of Tadro
+v <- 1 # internal velocity of Tadro
 Vmax <- 1.5 # maximum velocity of Tadro
 Cd <- 1 # coefficient of drag; the greater this is, the more effect inertia has
 a <- 1 # interaction range, repulsion grows exponentially when d is smaller than this
-# also as this increases the function grows steeper
+       # this also as this increases the function grows steeper
 
 # position of the light source, set as (0,0)
 light.x <- 0
@@ -131,7 +129,10 @@ Run <- function(){
     
   } # iteration loop ends
   
-  data <- data.frame(Time, tadro, x, y)
+  Prev.x <- prev.generate(x)
+  Prev.y <- prev.generate(y)
+  
+  data <- data.frame(Time, Tadro = tadro, x, y, Prev.x, Prev.y)
   return(data)
 } # main loop ends
 
@@ -144,7 +145,8 @@ n.iteration
 
 results <- Run()
 
-# * calculate the ideal group stability coeffcient and stuff
+
+
 
 # D. Graphic Representation of Data
 
@@ -156,30 +158,24 @@ results <- Run()
 # generate for different group size, goal.direct and other parameters
 # 
 
-results$Prev.x <- prev.generate(x)
-results$Prev.y <- prev.generate(y)
-Direction.x <- direction.mark.generate(x)
-Direction.y <- direction.mark.generate(y)
+# below code plots the path for the last 10 iteration
+n2 <- (n.iteration+1)*size
+n1 <- n2 - 10*size + 1
+n4 <- n1 - 1
+n3 <- n4 - size + 1
 
-plot.result <- ggplot(results[109:208,], aes(x = x, y = y, color = factor(Tadro))) +
-  geom_point(results[101:108,], aes(x = x, y = y, color = factor(Tadro))) +
+plot.result <- ggplot(results[n1:n2,], aes(x = x, y = y, colour = factor(Tadro))) +
+  geom_point(data = results[n3:n4,], aes(x = x, y = y, color = factor(Tadro))) +
   geom_segment(aes(xend = Prev.x, yend = Prev.y, color = factor(Tadro)), 
                arrow = arrow(length = unit(0.15,"cm"), ends = "first"))
 
 plot.result
 
 
-plot.result <- ggplot(results, aes(x = x, y = y, colour = factor(Tadro))) +
-  geom_point(data = results[1:8,], aes(x = x, y = y, colour = factor(Tadro))) +
-  # geom_path() +
-  # geom_segment(aes(xend = directionX, yend = directionY, colour=factor(Tadro)),arrow = arrow(length = unit(0.2,"cm")))
-  geom_segment(results,aes(xend = Prev.x, yend = Prev.y, colour=factor(Tadro)), arrow = arrow(length = unit(0.15,"cm"), ends = "first"))
-  # xlim(-2, 2) +
-  # ylim(-2, 2)
-  #facet_wrap(~Time)
 
-plot.result
 
+
+# E. Experimental Data Collection
 
 # Calculate the group stability, Sg
 
@@ -261,8 +257,15 @@ calc.sg <- function(data){
   
   data.Sg <- data.frame(iteration = c(1:n.iteration), Io = Io, Ii = Ii, Sg = Sg)
   return(data.Sg)
-  
 } # Sg calculation function ends
 
-Sg <- calc.sg(data)
+Sg <- calc.sg(results)
+
+# plot Sg by iteration
 plot(Sg$iteration, Sg$Sg)
+# test correlation
+cor.test(Sg$iteration, Sg$Sg)
+
+
+
+
