@@ -5,8 +5,8 @@ library(ggplot2)
 # A. Initializing parameters
 
 # experimental variables
-size <- 4 # number of Tadros in the group
-goal.direct <- 1 # degree of goal-directedness, between 0 and 1
+size <- 10 # number of Tadros in the group
+goal.direct <- 0 # degree of goal-directedness, between 0 and 1
 n.iteration <- 50 # numbers of iteration to run
 Tadro <- c(1:size)
 
@@ -212,7 +212,10 @@ min(Sg$Sg)
 # plot Sg by iteration
 plot.Sg <- ggplot(data = Sg, aes(x = iteration, y = Sg)) +
   geom_point() +
-  stat_smooth(method = 'lm', formula = y ~ x)
+  stat_smooth(method = 'lm', formula = y ~ x) +
+  ylim(0,1)
+
+plot.Sg
 
 # test correlation
 cor.test(Sg$iteration, Sg$Sg)
