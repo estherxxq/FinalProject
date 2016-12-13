@@ -1,80 +1,56 @@
 library(ggplot2)
-library(gganimate)
+
+# Run all the functions in the file Functions.R before running this model
 
 # A. Initializing parameters
 
 # experimental variables
-size <- 6 # number of Tadros in the group
-d.goal <- 1 # degree of goal-directedness, between 0 and 1
-n.iteration <- 50 # numbers of iteration to run
+size <- 7 # number of Tadros in the group
+goal.direct <- 1 # degree of goal-directedness, between 0 and 1
+n.iteration <- 3 # numbers of iteration to run
 Tadro <- c(1:size)
 
 # basic parameters for each Tadro
-v <- 1 # internal velocity of Tadro
+v <- 0.8 # internal velocity of Tadro
 Vmax <- 1.5 # maximum velocity of Tadro
-Cd <- 0.5 # coefficient of drag
-a <- 1 # repulsion constant
+Cd <- 1 # coefficient of drag; the greater this is, the more effect inertia has
+a <- 0.8 # interaction range, repulsion grows exponentially when d is smaller than this
+# this also as this increases the function grows steeper
 
+# environment parameters
 # position of the light source, set as (0,0)
 light.x <- 0
 light.y <- 0
+# diameter of the pool
+pool.diameter <- 10
 
-# Functions
-
-# Calculates distance between two points
-distance <- function(Ax, Ay, Bx, By){
-  d <- sqrt((Ax-Bx)^2 + (Ay-By)^2)
-  return(d)
-}
-
-# Calculates distance between a tadro and the light source
-light.distance <- function(x,y){
-  d <- sqrt((x-light.x)^2 + (y-light.y)^2)
-  return(d)
-}
-
-# Calculate the repulsion force on tadro A from tadro B, given the distance between
-# calc.repulsion <- function(d){
-#   c <- exp(-x/1) 
-# }
-
-# Decide whether to be goal directed, and calculate the attractive force
-cal.attrac <- function(distance.light){
-  goal <- runif(1, 0, 1)
-  if(goal < d.goal){
-    
-  }
-  
-}
-
-runif(1,0,1)
-
-# Normalize final displacement to not exceed Vmax
-check.velocity <- function(d){
-  if(d > Vmax){
-    d <- Vmax
-  } else {
-    d <- d
-  }
-  return(d)
-}
 
 # B. Main function
 
 Run <- function(){
   
   # initialize data frame for data collection
-  time <- rep(0:n.iteration, each = size)
+  Time <- rep(0:n.iteration, each = size)
   tadro <- rep(c(1:size), n.iteration + 1)
-  x <- numeric(length(time))
-  y <- numeric(length(time))
+  x <- numeric(length(Time))
+  y <- numeric(length(Time))
   
   last.dx <- numeric(size)
   last.dy <- numeric(size)
+  
   # initialize initial position (for iteration = 0)
+  # One way is to randomize the positions
+  # for(i in 1:size){
+  #   x[i] <- runif(1, -5, 5)
+  #   y[i] <- runif(1, -5, 5)
+  # }
+  # Another way is to let them start at the pool side
+  start.point <- circleFun(c(0,0), pool.diameter, size * 10)
+  
   for(i in 1:size){
-    x[i] <- runif(1, -5, 5)
-    y[i] <- runif(1, -5, 5)
+    s <- i * 10 - 3
+    x[i] <- start.point$xx[s]
+    y[i] <- start.point$yy[s]
   }
   
   # x and y coordinate can be represent as a function of iteration and tadro number
@@ -87,7 +63,7 @@ Run <- function(){
     
     # for each individual Tadro
     for(i in Tadro){
-    
+      
       # Read the final coordinates of Tadro i after the last iteration
       current.x <- x[size*(t-1) + i]
       current.y <- y[size*(t-1) + i]
@@ -95,15 +71,12 @@ Run <- function(){
       # 1. Calculate attractive force
       distance.light <- light.distance(current.x, current.y) # calculate the distance between tadro and light
       # displacement due to attraction to light is a function of velocity and goal-directedness
-      d.light <- 
+      d.light <- calc.attract(distance.light, current.x, current.y)
+      dx.light <- d.light[1]
+      dy.light <- d.light[2]
       
       # if tadro is not goal directed, it moves randomly
-      # the goal directedness is a lightlihood
-      
-      # alternatively, it could be something like generating a
-      
-      dx.light <- (light.x - current.x) * (d.light/distance.light) # displacement on x-axis
-      dy.light <- (light.y - current.y) * (d.light/distance.light) # displacement on y-axis
+      # alternatively, it moves d = v towards the light
       
       # 2. Calculate inertial force
       # a function of last final displacement, the drag coefficient, and the mass of tadro
@@ -116,7 +89,7 @@ Run <- function(){
       
       # calculate the repulsive force from each tadro other than i
       for(j in Tadro[-i]){
-     
+        
         # read the coordinates of Tadro j
         other.x <- x[size * (t-1) + j]
         other.y <- y[size * (t-1) + j]
@@ -127,7 +100,7 @@ Run <- function(){
         # the repulsion is a function of the distance and the repulsion coefficient a
         # when distance is far, repulsion is very small
         # as d decreases, repulsion increases exponentially
-        repulsion <- exp(-d/a)
+        repulsion <- exp(-d/a) * v
         
         # to get displacement on the x and y axes
         dx.R[j] <- (current.x - other.x) * (repulsion/d)
@@ -135,10 +108,11 @@ Run <- function(){
         
       } # repulsion loop ends
       
+      
       # sum to get total displacement due to repulsion
       dx.repulse <- sum(dx.R)
       dy.repulse <- sum(dy.R)
-
+      
       # 4. Calculate final displacement
       # sum to get total displacement on x and y axes
       dx <- dx.light + dx.inert + dx.repulse
@@ -165,9 +139,13 @@ Run <- function(){
       last.dy[i] <- final.dy
       
     } # individual loop ends
+    
   } # iteration loop ends
   
-  data  <- data.frame(Time = time, Tadro = tadro, x = x, y = y)
+  Prev.x <- prev.generate(x)
+  Prev.y <- prev.generate(y)
+  
+  data <- data.frame(Time, Tadro = tadro, x, y, Prev.x, Prev.y)
   return(data)
 } # main loop ends
 
@@ -175,12 +153,14 @@ Run <- function(){
 
 # check parameters; if not set as desired values, adjust at top of file
 size
-d.goal
+goal.direct
 n.iteration
 
-data <- Run()
+results <- Run()
 
-# * calculate the ideal group stability coeffcient and stuff
+
+
+
 
 # D. Graphic Representation of Data
 
@@ -189,23 +169,56 @@ data <- Run()
 # 
 # note the stability coefficient
 # 
-# generate for different group size, d.goal and other parameters
+# generate for different group size, goal.direct and other parameters
 # 
 
-data$prevX <- mapply(function(tadro, time){
-  return(subset(data, Tadro=tadro, Time=(time-1))$x)
-}, data$Tadro, data$Time)
+# below code plots the path for the last 10 iteration
+n2 <- (n.iteration+1)*size
+n1 <- n2 - 10*size + 1
+n4 <- n1 - 1
+n3 <- n4 - size + 1
 
-data$prevY <- mapply(function(tadro, time){
-  return(subset(data, Tadro=tadro, Time=(time-1))$y)
-}, data$Tadro, data$Time)
+# laying out a pool on top of the graph
+pool <- circleFun(c(0,0), pool.diameter, size * 10)
+results$xx <- c(1:((n.iteration - 9)*size), pool$xx)
+results$yy <- c(1:((n.iteration - 9)*size), pool$yy)
 
-results <- ggplot(data[1:36,], aes(x = x, y = y, color = factor(Tadro))) +
+# plotting: point of the first iteration being plotted, and then segments with arrows 
+plot.result <- ggplot(results[n1:n2,], aes(x = x, y = y)) +
+  geom_point(data = results[n3:n4,], aes(x = x, y = y, color = factor(Tadro))) +
+  geom_segment(aes(xend = Prev.x, yend = Prev.y, color = factor(Tadro)), 
+               arrow = arrow(length = unit(0.15,"cm"), ends = "first")) +
+  geom_path(aes(xx, yy))
+
+# view plot
+plot.result
+
+# below code plots all iterations
+plot.all.result <- ggplot(results, aes(x = x, y = y)) +
+  geom_point(data = results[1:size,], aes(x = x, y = y, color = factor(Tadro))) +
+  geom_segment(data = results, aes(xend = Prev.x, yend = Prev.y, color = factor(Tadro)), 
+               arrow = arrow(length = unit(0.15,"cm"), ends = "first")) +
+  geom_path(data = results[n1:n2,], aes(xx, yy))
+
+plot.all.result
+
+# E. Experimental Data Collection
+
+# The Sg function is defined in a separate file and calculates Group Stability
+Sg <- calc.sg(results)
+
+max(Sg$Sg)
+min(Sg$Sg)
+# plot Sg by iteration
+plot.Sg <- ggplot(data = Sg, aes(x = iteration, y = Sg)) +
   geom_point() +
-  geom_segment(aes(xend=prevX, yend=prevY))+
-  xlim(-5, 5) +
-  ylim(-5, 5) +
-  facet_wrap(~Time)
+  stat_smooth(method = 'lm', formula = y ~ x) +
+  ylim(0,1)
+  
 
-results
-gg_animate(results)
+plot.Sg
+
+# test correlation
+cor.test(Sg$iteration, Sg$Sg)
+
+
