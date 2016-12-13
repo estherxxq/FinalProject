@@ -5,9 +5,9 @@ library(ggplot2)
 # A. Initializing parameters
 
 # experimental variables
-size <- 10 # number of Tadros in the group
-goal.direct <- 0 # degree of goal-directedness, between 0 and 1
-n.iteration <- 50 # numbers of iteration to run
+size <- 7 # number of Tadros in the group
+goal.direct <- 1 # degree of goal-directedness, between 0 and 1
+n.iteration <- 3 # numbers of iteration to run
 Tadro <- c(1:size)
 
 # basic parameters for each Tadro
@@ -214,6 +214,7 @@ plot.Sg <- ggplot(data = Sg, aes(x = iteration, y = Sg)) +
   geom_point() +
   stat_smooth(method = 'lm', formula = y ~ x) +
   ylim(0,1)
+  
 
 plot.Sg
 
